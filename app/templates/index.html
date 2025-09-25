@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Food Diary</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f8f8f8;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 800px;
+            margin: 50px auto;
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+
+        form {
+            display: flex;
+            margin-bottom: 30px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 10px;
+            font-size: 16px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+        }
+
+        button {
+            padding: 10px 20px;
+            margin-left: 10px;
+            font-size: 16px;
+            border: none;
+            border-radius: 6px;
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        .meal {
+            margin-bottom: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            background-color: #f0f0f0;
+        }
+
+        .meal strong {
+            font-size: 18px;
+        }
+
+        .nutrients ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .nutrients li {
+            padding: 4px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Food Diary</h1>
+
+        <form action="/analyze" method="post">
+            <input type="text" name="meal_text" placeholder="Enter your meal, e.g., 2 eggs, 1 banana" required>
+            <button type="submit">Analyze Meal</button>
+        </form>
+
+        <h2>Recent Meals</h2>
+        {% for meal_text, nutrients_json in meals %}
+        <div class="meal">
+            <strong>{{ meal_text }}</strong>
+            <div class="nutrients">    
+                <ul>
+                    {% for item in nutrients %}
+                    <li>{{ item.name }} - Calories: {{ item.calories }}, Protein: {{ item.protein }}g, Fat: {{ item.fat }}g, Carbs: {{ item.carbs }}g</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</body>
+</html>
