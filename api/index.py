@@ -11,8 +11,5 @@ templates = Jinja2Templates(directory="app/templates")
 
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
-    try:
-        return templates.TemplateResponse("index.html", {"request": request})
-    except Exception as e:
-        return HTMLResponse(f"Error: {e}", status_code=500)
+    return templates.TemplateResponse("index.html", {"request": request})
 
