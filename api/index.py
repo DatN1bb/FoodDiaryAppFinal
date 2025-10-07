@@ -1,8 +1,7 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Form
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from fastapi import Form
 
 app = FastAPI()
 
@@ -14,7 +13,8 @@ templates = Jinja2Templates(directory="app/templates")
 async def home(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
+# Change parameter from 'food' to 'meal_text'
 @app.post("/analyze")
-async def analyze(food: str = Form(...)):
-    result = analyze_food(food)  # your function
+async def analyze(meal_text: str = Form(...)):
+    result = analyze_food(meal_text)  # your function
     return {"analysis": result}

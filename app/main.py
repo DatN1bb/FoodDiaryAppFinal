@@ -1,18 +1,26 @@
 from fastapi import FastAPI, Request, Form, Body
 from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 import sqlite3
-import httpx
 import json
 import re
+import httpx
 
 app = FastAPI()
-templates = Jinja2Templates(directory="templates")
+
+# Mount static and templates
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
+templates = Jinja2Templates(directory="app/templates")
 
 DB_PATH = "food_diary.db"
 
-# --- DB setup ---
+# --- Pydantic model for JSON requests ---
+class FoodRequest(BaseModel):
+    food: str
+
+# --- Initialize DB ---
 def init_db():
     conn = sqlite3.connect(DB_PATH, check_same_thread=False, timeout=10)
     c = conn.cursor()
@@ -28,8 +36,8 @@ def init_db():
 
 init_db()
 
-# --- Meal parsing & nutrients ---
-def mock_parse_meal(meal_text):
+# --- Helper functions ---
+def mock_parse_meal(meal_text: str):
     items = [item.strip() for item in meal_text.split(",")]
     cleaned_items = []
     for item in items:
@@ -37,7 +45,7 @@ def mock_parse_meal(meal_text):
         cleaned_items.append(cleaned)
     return cleaned_items
 
-def fetch_nutrients(item_name):
+def fetch_nutrients(item_name: str):
     url = "https://world.openfoodfacts.org/cgi/search.pl"
     params = {"search_terms": item_name, "search_simple": 1, "action": "process", "json": 1, "page_size": 1}
     try:
@@ -58,7 +66,8 @@ def fetch_nutrients(item_name):
         "carbs": product.get("nutriments", {}).get("carbohydrates_100g", 0),
     }
 
-def analyze_meal(meal_text):
+# --- Main meal analysis function ---
+def analyze_food(meal_text: str):
     items = mock_parse_meal(meal_text)
     results = []
     for item in items:
@@ -66,35 +75,39 @@ def analyze_meal(meal_text):
         results.append(nutrients if nutrients else {"name": item, "calories": 0, "protein": 0, "fat": 0, "carbs": 0})
     return results
 
-# --- JSON model for API requests ---
-class MealRequest(BaseModel):
-    meal_text: str
-
 # --- Routes ---
 @app.get("/", response_class=HTMLResponse)
-def index(request: Request):
+async def home(request: Request):
+    # Fetch last 10 meals from DB
     conn = sqlite3.connect(DB_PATH, check_same_thread=False, timeout=10)
     c = conn.cursor()
     c.execute("SELECT meal_text, nutrients FROM meals ORDER BY id DESC LIMIT 10")
     rows = c.fetchall()
     conn.close()
+
     meals = [(meal_text, json.loads(nutrients_json)) for meal_text, nutrients_json in rows]
     return templates.TemplateResponse("index.html", {"request": request, "meals": meals})
 
 @app.post("/analyze", response_class=HTMLResponse)
-async def analyze(request: Request, meal_text: str = Form(None), meal: MealRequest = Body(None)):
+async def analyze(
+    request: Request,
+    meal_text: str = Form(None),        # for HTML forms
+    food: FoodRequest = Body(None)      # for JSON requests
+):
     """
-    Handles both form submissions (meal_text) and JSON body (meal.meal_text)
+    Handles both:
+    - Form submissions (meal_text)
+    - JSON submissions (food)
     """
-    # Determine source
-    if meal_text:  # form data
+    if meal_text:
         text = meal_text
-    elif meal and meal.meal_text:  # JSON
-        text = meal.meal_text
+    elif food and food.food:
+        text = food.food
     else:
-        return {"error": "No meal_text provided"}  # could also return a 422
+        return {"error": "No meal data provided"}  # prevents 422
 
-    results = analyze_meal(text)
+    # Analyze the meal
+    results = analyze_food(text)
 
     # Save to DB
     conn = sqlite3.connect(DB_PATH, check_same_thread=False, timeout=10)
@@ -103,4 +116,5 @@ async def analyze(request: Request, meal_text: str = Form(None), meal: MealReque
     conn.commit()
     conn.close()
 
+    # Return HTML template
     return templates.TemplateResponse("index.html", {"request": request, "meals": [(text, results)]})
