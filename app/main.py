@@ -79,17 +79,16 @@ async def home(request: Request):
     meals = [(meal_text, json.loads(nutrients_json)) for meal_text, nutrients_json in rows]
     return templates.TemplateResponse("index.html", {"request": request, "meals": meals})
 
-@app.post("/analyze", response_class=HTMLResponse)
-async def analyze(request: Request,
-                  meal_text: str = Form(None),      # for HTML forms
-                  food: FoodRequest = Body(None)):  # for JSON requests
-    # Determine which input was sent
-    if meal_text:
-        text = meal_text
-    elif food and food.food:
-        text = food.food
-    else:
-        return {"error": "No meal data provided"}  # prevents 500 or 422
+@app.post("/analyze")
+async def analyze(meal_text: str = Form(...)):
+    try:
+        print("🔍 Received form data:", meal_text)
+        result = analyze_food(meal_text)
+        print("✅ Analysis complete:", result)
+        return {"analysis": result}
+    except Exception as e:
+        print("❌ Error in /analyze:", e)
+        return {"error": str(e)}
 
     results = analyze_food(text)
 
