@@ -1,1 +1,1 @@
-fastapiuvicornjinja2pydanticrequests 
+fastapiuvicornjinja2mangumpython-multipartrequests 
