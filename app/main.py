@@ -6,6 +6,7 @@ import sqlite3
 import json
 import re
 import requests
+import os
 
 app = FastAPI()
 templates = Jinja2Templates(directory="app/templates")
@@ -81,16 +82,19 @@ async def home(request: Request):
 
 @app.post("/analyze")
 async def analyze(meal_text: str = Form(...)):
-    try:
-        print("🔍 Received form data:", meal_text)
-        result = analyze_food(meal_text)
-        print("✅ Analysis complete:", result)
-        return {"analysis": result}
-    except Exception as e:
-        print("❌ Error in /analyze:", e)
-        return {"error": str(e)}
+    results = analyze_meal(meal_text)
 
-    results = analyze_food(text)
+    if not os.environ.get("VERCEL"):  # only save locally
+        conn = sqlite3.connect("food_diary.db")
+        c = conn.cursor()
+        c.execute(
+            "INSERT INTO meals (meal_text, nutrients) VALUES (?, ?)",
+            (meal_text, json.dumps(results))
+        )
+        conn.commit()
+        conn.close()
+
+    return {"analysis": results}
 
     # Save to DB safely
     conn = sqlite3.connect(DB_PATH)
