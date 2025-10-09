@@ -82,19 +82,16 @@ async def home(request: Request):
 
 @app.post("/analyze")
 async def analyze(meal_text: str = Form(...)):
-    results = analyze_meal(meal_text)
+    try:
+        print("🔍 Received form data:", meal_text)
+        result = analyze_food(meal_text)
+        print("✅ Analysis complete:", result)
+        return {"analysis": result}
+    except Exception as e:
+        print("❌ Error in /analyze:", e)
+        return {"error": str(e)}
 
-    if not os.environ.get("VERCEL"):  # only save locally
-        conn = sqlite3.connect("food_diary.db")
-        c = conn.cursor()
-        c.execute(
-            "INSERT INTO meals (meal_text, nutrients) VALUES (?, ?)",
-            (meal_text, json.dumps(results))
-        )
-        conn.commit()
-        conn.close()
-
-    return {"analysis": results}
+    results = analyze_food(text)
 
     # Save to DB safely
     conn = sqlite3.connect(DB_PATH)
